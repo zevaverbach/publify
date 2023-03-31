@@ -18,6 +18,14 @@ if NETLIFY_DOMAINS:
     NETLIFY_DOMAINS = NETLIFY_DOMAINS.split(",")
 
 
+class DomainInUse(Exception):
+    pass
+
+
+class InvalidArguments(Exception):
+    pass
+
+
 class NoCustomDomains(Exception):
     pass
 
@@ -70,7 +78,6 @@ def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -
     if custom_domain is not None:
         sleep(2)
         set_to_custom_domain(rj["id"], custom_domain)
-        print(f"the custom domain was set to {custom_domain}.")
 
 
 def remove_custom_domain(site_id: str) -> None:
@@ -112,9 +119,20 @@ def get_site_id_from_custom_domain(custom_domain: str) -> str:
     raise NoResult
 
 
+def check_that_custom_domain_is_not_in_use(custom_domain: str) -> None:
+    URL = "https://api.netlify.com/api/v1/sites"
+    response = requests.get(URL, headers=AUTH_HEADER)
+    if not response.ok:
+        raise Exception("something went wrong")
+    rj = response.json()
+    for site in rj:
+        if site["custom_domain"] == custom_domain:
+            raise DomainInUse(f"{custom_domain} is already in use")
+
+
 def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
     URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
-    print(f"{URL=}")
+    check_that_custom_domain_is_not_in_use(custom_domain)
     response = requests.put(
         URL,
         json={"custom_domain": custom_domain},
@@ -123,6 +141,7 @@ def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
     if not response.ok:
         print(response.reason)
         raise Exception("something went wrong with setting the custom domain")
+    print(f"the site is published at {custom_domain}.")
 
 
 def cli_remove_custom_domain() -> None:
@@ -168,7 +187,6 @@ def cli_set_custom_domain() -> None:
     if len(NETLIFY_DOMAINS) == 1 and custom_domain.count(".") == 0:
         custom_domain = f"{custom_domain}.{NETLIFY_DOMAINS[0]}"
     set_to_custom_domain(site_id, custom_domain)
-    print(f"custom domain was set to {custom_domain}")
 
 
 def cli_delete_site() -> None:
@@ -214,7 +232,7 @@ def delete_site(site_id: str) -> None:
 
 def display_help() -> None:
     print(
-        """
+        """Usage:
     netlify.py --help
     netlify.py --root-dir <path> --custom-domain <domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
     netlify.py --list-sites
@@ -240,6 +258,13 @@ def deploy_site() -> None:
         except IndexError:
             print("Please provide a --custom-domain")
             return
+        else:
+            check_that_custom_domain_is_not_in_use(custom_domain)
+    else:
+        args = sys.argv[1:].copy()
+        args.remove("--root_dir")
+        if args:
+            raise InvalidArguments(", ".join(args))
     if "--root-dir" not in sys.argv:
         return display_help()
     try:
@@ -308,12 +333,16 @@ def main() -> None:
         if "--domain" in sys.argv:
             print("Please supply a --domain")
             sys.exit()
-        cli_set_custom_domain()
+        try:
+            cli_set_custom_domain()
+        except DomainInUse:
+            print("That domain is already in use")
+            sys.exit()
         sys.exit()
     else:
         try:
             deploy_site()
-        except NoCustomDomains as e:
+        except (NoCustomDomains, DomainInUse) as e:
             print(str(e))
 
 
