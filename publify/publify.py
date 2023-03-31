@@ -335,8 +335,8 @@ def main() -> None:
             return
         try:
             cli_set_custom_domain()
-        except DomainInUse:
-            print("That domain is already in use")
+        except DomainInUse as e:
+            print(str(e))
         return
     else:
         try:
