@@ -26,14 +26,14 @@ Usage:
     ├── styles.css
     └── a.jpg
 >
-> pub --root-dir mysite
+> pub mysite/
 the site is published: http://6426ed336771f2380224fb84--scintillating-mochi-760bd3.netlify.app
 ```
 
 ## Publish Sites to Netlify With Custom Subdomains Too!
 
 ```bash
-> pub --root-dir mysite --custom-domain dude.helpers.fun
+> pub mysite dude.helpers.fun
 the site is published: http://6426ee6a10e4e43866b46a42--startling-gingersnap-425138.netlify.app
 the site is published at dude.helpers.fun.
 ```

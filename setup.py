@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="publify",
-    version="0.1.9",
+    version="0.2.0",
     description="A CLI for publishing sites to Netlify and assigning custom domains to them.",
     author="Zev Averbach",
     author_email="zev@averba.ch",
