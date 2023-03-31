@@ -65,7 +65,7 @@ def cli_set_custom_domain(custom_domain: str, domain: str) -> None:
     """
     check_that_custom_domain_is_not_in_use(custom_domain)
     try:
-        site_id, _ = get_site_id_from_netlify_domain(domain)
+        site_id, domain = get_site_id_from_netlify_domain(domain)
     except NoResult:
         print(f"No site found with domain '{domain}'")
         return
