@@ -21,7 +21,7 @@ setup(
     ],
     packages=["publify"],
     include_package_data=True,
-    install_requires=["python-dotenv", "requests"],
+    install_requires=["requests"],
     python_requires=">=3.10",  # only because we're using | instead of typing.Union; otherwise >= 3.9
     url="https://github.com/zevaverbach/publify",
     entry_points={"console_scripts": ["pub=publify.publify:main"]},

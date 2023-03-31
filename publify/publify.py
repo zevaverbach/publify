@@ -7,10 +7,11 @@ import uuid
 
 import requests
 
-from dotenv import load_dotenv
-
-load_dotenv()
-NETLIFY_TOKEN = os.environ["NETLIFY_TOKEN"]
+try:
+    NETLIFY_TOKEN = os.environ["NETLIFY_TOKEN"]
+except KeyError:
+    print("Please set the environment variable NETLIFY_TOKEN")
+    sys.exit(1)
 AUTH_HEADER = {"Authorization": f"Bearer {NETLIFY_TOKEN}"}
 NETLIFY_DOMAINS = os.getenv("NETLIFY_DOMAINS") or ""
 if NETLIFY_DOMAINS:
@@ -129,7 +130,7 @@ def cli_remove_custom_domain() -> None:
     Remove a custom domain from a Netlify site
     """
     if len(NETLIFY_DOMAINS) == 0:
-        print("Please set NETLIFY_DOMAINS in your .env file")
+        print("Please set the environment variable NETLIFY_DOMAINS")
         raise NoCustomDomains
     try:
         custom_domain = sys.argv[sys.argv.index("--remove-custom-domain") + 1]
