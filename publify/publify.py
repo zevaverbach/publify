@@ -6,7 +6,6 @@ from time import sleep
 import uuid
 
 import requests
-from rich.pretty import pprint
 
 from dotenv import load_dotenv
 
@@ -60,16 +59,15 @@ def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -
     if not response.ok:
         raise Exception("something went wrong")
     rj = response.json()
-    print("the url is " + rj["url"])
+    print("the site is published: " + rj["url"])
     if custom_domain is not None:
         sleep(2)
         set_to_custom_domain(rj["id"], custom_domain)
-        print(f"custom domain was set to {custom_domain}")
+        print(f"the custom domain was set to {custom_domain}.")
 
 
 def remove_custom_domain(site_id: str) -> None:
     URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
-    print(f"{URL=}")
     response = requests.put(
         URL,
         json={"custom_domain": None},
@@ -143,7 +141,7 @@ def cli_set_custom_domain() -> None:
     try:
         custom_domain = sys.argv[sys.argv.index("--custom-domain") + 1]
     except IndexError:
-        print("Please provide a domain")
+        print("Please provide a --custom-domain")
         return
     if "--domain" not in sys.argv:
         print("Please provide a --domain")
@@ -225,7 +223,7 @@ def deploy_site() -> None:
         try:
             custom_domain = sys.argv[sys.argv.index("--custom-domain") + 1]
         except IndexError:
-            print("Please provide a domain")
+            print("Please provide a --custom-domain")
             return
     if "--root-dir" not in sys.argv:
         print("Please provide a root directory")
@@ -243,7 +241,6 @@ def deploy_site() -> None:
     ):
         custom_domain = f"{custom_domain}.{DOMAINS[0]}"
     deploy_page_to_netlify(root_dir, custom_domain)
-    print("okay, should be all set!")
 
 
 def cli_list_sites() -> None:
@@ -285,7 +282,7 @@ def main() -> None:
     elif "--delete-site" in sys.argv or "--remove-site" in sys.argv:
         cli_delete_site()
         sys.exit()
-    elif "--custom-domain" in sys.argv:
+    elif "--custom-domain" in sys.argv and "--root-dir" not in sys.argv:
         cli_set_custom_domain()
         sys.exit()
     else:
