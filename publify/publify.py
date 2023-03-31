@@ -51,7 +51,9 @@ def make_a_zip_file(dirpath: pl.Path) -> pl.Path:
 
 def make_sure_theres_a_nested_folder_and_index_html(dirpath: pl.Path) -> None:
     if "folder" not in [d.name for d in list(dirpath.iterdir())]:
-        raise NoNestedFolder
+        raise NoNestedFolder(
+            "Please create a folder in the root of the site's directory, and put all the files in there."
+        )
 
     if "index.html" not in [i.name for i in list((dirpath / "folder").iterdir())]:
         raise NoIndexHtml
@@ -233,12 +235,12 @@ def delete_site(site_id: str) -> None:
 def display_help() -> None:
     print(
         """Usage:
-    netlify.py --help
-    netlify.py --root-dir <path> --custom-domain <domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
-    netlify.py --list-sites
-    netlify.py --custom-domain <custom_domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)> --domain <existing_domain>
-    netlify.py --remove-custom-domain <custom_domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
-    netlify.py --delete-site <domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
+    pub --help
+    pub --root-dir <path> --custom-domain <domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
+    pub --list-sites
+    pub --custom-domain <custom_domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)> --domain <existing_domain>
+    pub --remove-custom-domain <custom_domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
+    pub --delete-site <domain (or subdomain prefix if there's only one domain in NETLIFY_DOMAINS)>
     """
     )
 
@@ -306,7 +308,7 @@ def cli_list_sites() -> None:
 
 
 def main() -> None:
-    if "--help" in sys.argv:
+    if "--help" in sys.argv or len(sys.argv) == 1:
         display_help()
         sys.exit()
     elif "--list-sites" in sys.argv:
@@ -330,7 +332,7 @@ def main() -> None:
         if len(NETLIFY_DOMAINS) == 0:
             print("No custom domains configured in NETLIFY_DOMAINS")
             sys.exit()
-        if "--domain" in sys.argv:
+        if "--domain" not in sys.argv:
             print("Please supply a --domain")
             sys.exit()
         try:
@@ -342,7 +344,7 @@ def main() -> None:
     else:
         try:
             deploy_site()
-        except (NoCustomDomains, DomainInUse) as e:
+        except (NoCustomDomains, DomainInUse, NoNestedFolder) as e:
             print(str(e))
 
 

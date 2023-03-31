@@ -19,8 +19,23 @@ the site is published: http://6426ed336771f2380224fb84--scintillating-mochi-760b
 ```bash
 > pub --root-dir mysite --custom-domain dude.helpers.fun
 the site is published: http://6426ee6a10e4e43866b46a42--startling-gingersnap-425138.netlify.app
-the custom domain was set to dude.helpers.fun.
+the site is published at dude.helpers.fun.
 ```
+
+If you only have one domain set up with Netlify, there's no need to include anything but the subdomain part:
+
+```bash
+> pub --root-dir mysite --custom-domain dudette
+the site is published: http://642718842cb34f02bc6b0137--cheery-daifuku-f3417f.netlify.app
+the site is published at dudette.helpers.fun.
+```
+
+## Add A Custom Domain To An Already Published Site!
+
+```bash
+> pub --custom-domain hey.helpers.fun --domain startling-gingersnap-425138.netlify.app
+```
+
 
 # But First, a Bit of Configuration
 
