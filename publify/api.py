@@ -11,9 +11,9 @@ except KeyError:
     print("Please set the environment variable NETLIFY_TOKEN")
     sys.exit(1)
 
-NETLIFY_DOMAINS = os.getenv("NETLIFY_DOMAINS") or ""
-if NETLIFY_DOMAINS:
-    NETLIFY_DOMAINS = NETLIFY_DOMAINS.split(",")
+DOMAINS = os.getenv("NETLIFY_DOMAINS") or ""
+if DOMAINS:
+    DOMAINS = DOMAINS.split(",")
 
 AUTH_HEADER = {"Authorization": f"Bearer {NETLIFY_TOKEN}"}
 

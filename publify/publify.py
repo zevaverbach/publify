@@ -11,7 +11,7 @@ from .api import (
     delete_site,
     deploy_page_to_netlify,
     NoResult,
-    NETLIFY_DOMAINS,
+    DOMAINS,
     DomainInUse,
     TooManyResults,
 )
@@ -46,19 +46,16 @@ def cli_deploy_site(root_dir: str, custom_domain: str | None) -> None:
     Deploy a folder of web pages to Netlify
     """
     if custom_domain is not None:
-        if len(NETLIFY_DOMAINS) == 0:
+        if len(DOMAINS) == 0:
             raise NoCustomDomains(
                 "No custom domains configured in NETLIFY_DOMAINS, and a custom domain was provided"
             )
-        else:
-            check_that_custom_domain_is_not_in_use(custom_domain)
+        if custom_domain.count(".") == 0:
+            if len(DOMAINS) == 1:
+                raise TooManyResults("Please provide a full custom domain")
+            custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+        check_that_custom_domain_is_not_in_use(custom_domain)
 
-    if (
-        custom_domain is not None
-        and len(NETLIFY_DOMAINS) == 1
-        and custom_domain.count(".") == 0
-    ):
-        custom_domain = f"{custom_domain}.{NETLIFY_DOMAINS[0]}"
     deploy_page_to_netlify(pl.Path(root_dir), custom_domain)
 
 
@@ -72,8 +69,11 @@ def cli_set_custom_domain(custom_domain: str, domain: str) -> None:
     except NoResult:
         print(f"No site found with domain '{domain}'")
         return
-    if len(NETLIFY_DOMAINS) == 1 and custom_domain.count(".") == 0:
-        custom_domain = f"{custom_domain}.{NETLIFY_DOMAINS[0]}"
+    if custom_domain.count(".") == 0:
+        if len(DOMAINS) == 1:
+            custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+        else:
+            raise TooManyResults("Please provide a full custom domain")
     set_to_custom_domain(site_id, custom_domain, domain)
 
 
@@ -81,8 +81,8 @@ def cli_remove_custom_domain() -> None:
     """
     Remove a custom domain from a Netlify site
     """
-    if len(NETLIFY_DOMAINS) == 0:
-        print("Please set the environment variable NETLIFY_DOMAINS")
+    if len(DOMAINS) == 0:
+        print("Please set the environment variable DOMAINS")
         raise NoCustomDomains
     try:
         custom_domain = sys.argv[sys.argv.index("remove-custom") + 1]
@@ -92,8 +92,11 @@ def cli_remove_custom_domain() -> None:
         except IndexError:
             print("Please provide a domain")
             return
-    if len(NETLIFY_DOMAINS) == 1 and custom_domain.count(".") == 0:
-        custom_domain = f"{custom_domain}.{NETLIFY_DOMAINS[0]}"
+    if custom_domain.count(".") == 0:
+        if len(DOMAINS) == 1:
+            custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+        else:
+            raise TooManyResults("Please provide a full custom domain")
     site_id, full_custom_domain = get_site_id_from_custom_domain(custom_domain)
     remove_custom_domain(site_id)
     print(f"'{full_custom_domain}' was removed")
@@ -114,12 +117,15 @@ def cli_delete_site() -> None:
     try:
         site_id, full_domain = get_site_id_from_netlify_domain(domain)
     except NoResult:
-        if len(NETLIFY_DOMAINS) == 0:
+        if len(DOMAINS) == 0:
             raise NoCustomDomains(
                 "No custom domains configured in NETLIFY_DOMAINS, and couldn't find a site with that domain"
             )
-        if domain.count(".") == 0 and len(NETLIFY_DOMAINS) == 1:
-            domain = f"{domain}.{NETLIFY_DOMAINS[0]}"
+        if domain.count(".") == 0:
+            if len(DOMAINS) == 1:
+                domain = f"{domain}.{DOMAINS[0]}"
+            else:
+                raise TooManyResults("Please provide a full custom domain")
         try:
             site_id, full_domain = get_site_id_from_custom_domain(domain)
         except NoResult:
@@ -134,14 +140,15 @@ def cli_list_sites() -> None:
     List all sites on Netlify
     """
     sites = get_all_sites()
+    print()
     print("sites without custom domains:")
     for site in sites:
         if site["custom_domain"] is None:
             print(f"{site['name']}: {site['url']}")
 
     print()
-
     print("sites with custom domains:")
+    print()
     for site in sites:
         if site["custom_domain"] is not None:
             print(f"{site['name']}: {site['url']}")
@@ -163,11 +170,11 @@ def main() -> None:
     if "delete" in sys.argv or "remove" in sys.argv:
         try:
             cli_delete_site()
-        except (NoCustomDomains, NoResult) as e:
+        except (NoCustomDomains, NoResult, TooManyResults) as e:
             print(str(e))
         return
     if "custom" in sys.argv:
-        if len(NETLIFY_DOMAINS) == 0:
+        if len(DOMAINS) == 0:
             print("No custom domains configured in NETLIFY_DOMAINS")
             return
         args = sys.argv[2:]

@@ -25,7 +25,7 @@ the site is published at dude.helpers.fun.
 If you only have one domain set up with Netlify, there's no need to include anything but the subdomain part:
 
 ```bash
-> pub --root-dir mysite --custom-domain dudette
+> pub mysite/ dudette
 the site is published: http://642718842cb34f02bc6b0137--cheery-daifuku-f3417f.netlify.app
 the site is published at dudette.helpers.fun.
 ```
@@ -33,7 +33,7 @@ the site is published at dudette.helpers.fun.
 ## Add A Custom Subdomain To An Already Published Site!
 
 ```bash
-> pub --custom-domain hey.helpers.fun --domain startling-gingersnap-425138.netlify.app
+> pub custom hey.helpers.fun startling-gingersnap-425138.netlify.app
 ```
 
 
