@@ -1,0 +1,296 @@
+import os
+import pathlib as pl
+import shutil
+import sys
+from time import sleep
+import uuid
+
+import requests
+from rich.pretty import pprint
+
+from dotenv import load_dotenv
+
+load_dotenv()
+NETLIFY_TOKEN = os.environ["NETLIFY_TOKEN"]
+AUTH_HEADER = {"Authorization": f"Bearer {NETLIFY_TOKEN}"}
+DOMAINS = os.environ["DOMAINS"].split(",")
+
+
+class NoNestedFolder(Exception):
+    pass
+
+
+class NoIndexHtml(Exception):
+    pass
+
+
+class NoResult(Exception):
+    pass
+
+
+def make_a_zip_file(dirpath: pl.Path) -> pl.Path:
+
+    zipfile_filename = str(uuid.uuid4())
+    shutil.make_archive(zipfile_filename, "zip", dirpath)
+    return pl.Path(zipfile_filename + ".zip")
+
+
+def make_sure_theres_a_nested_folder_and_index_html(dirpath: pl.Path) -> None:
+    if "folder" not in [d.name for d in list(dirpath.iterdir())]:
+        raise NoNestedFolder
+
+    if "index.html" not in [i.name for i in list((dirpath / "folder").iterdir())]:
+        raise NoIndexHtml
+
+
+def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -> None:
+    make_sure_theres_a_nested_folder_and_index_html(dirpath)
+
+    URL = "https://api.netlify.com/api/v1/sites"
+    headers = {
+        "Content-Type": "application/zip",
+    } | AUTH_HEADER
+    zip_file = make_a_zip_file(dirpath)
+    response = requests.post(
+        URL,
+        data=zip_file.read_bytes(),
+        headers=headers,
+    )
+    zip_file.unlink()
+    if not response.ok:
+        raise Exception("something went wrong")
+    rj = response.json()
+    print("the url is " + rj["url"])
+    if custom_domain is not None:
+        sleep(2)
+        set_to_custom_domain(rj["id"], custom_domain)
+        print(f"custom domain was set to {custom_domain}")
+
+
+def remove_custom_domain(site_id: str) -> None:
+    URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
+    print(f"{URL=}")
+    response = requests.put(
+        URL,
+        json={"custom_domain": None},
+        headers=AUTH_HEADER,
+    )
+    if not response.ok:
+        print(response.reason)
+        raise Exception("something went wrong with removing the custom domain")
+
+
+def get_site_id_from_netlify_domain(domain: str) -> str:
+    URL = "https://api.netlify.com/api/v1/sites"
+    response = requests.get(URL, headers=AUTH_HEADER)
+    if not response.ok:
+        raise Exception("something went wrong")
+    rj = response.json()
+    if not domain.startswith("http://"):
+        domain = f"http://{domain}"
+    print(f"trying to find {domain}")
+    for site in rj:
+        if site["url"] == domain:
+            return site["id"]
+    raise NoResult
+
+
+def get_site_id_from_custom_domain(custom_domain: str) -> str:
+    URL = "https://api.netlify.com/api/v1/sites"
+    response = requests.get(URL, headers=AUTH_HEADER)
+    if not response.ok:
+        raise Exception("something went wrong")
+    rj = response.json()
+    for site in rj:
+        if site["custom_domain"] == custom_domain:
+            return site["id"]
+    raise NoResult
+
+
+def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
+    URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
+    print(f"{URL=}")
+    response = requests.put(
+        URL,
+        json={"custom_domain": custom_domain},
+        headers=AUTH_HEADER,
+    )
+    if not response.ok:
+        print(response.reason)
+        raise Exception("something went wrong with setting the custom domain")
+
+
+def cli_remove_custom_domain() -> None:
+    """
+    Remove a custom domain from a Netlify site
+    """
+    try:
+        custom_domain = sys.argv[sys.argv.index("--remove-custom-domain") + 1]
+    except IndexError:
+        print("Please provide a domain")
+        return
+    if len(DOMAINS) == 1 and custom_domain.count(".") == 0:
+        custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+    site_id = get_site_id_from_custom_domain(custom_domain)
+    remove_custom_domain(site_id)
+    print(f"{custom_domain} was removed")
+
+
+def cli_set_custom_domain() -> None:
+    """
+    Assign a custom domain to an already deployed site on Netlify
+    """
+    try:
+        custom_domain = sys.argv[sys.argv.index("--custom-domain") + 1]
+    except IndexError:
+        print("Please provide a domain")
+        return
+    if "--domain" not in sys.argv:
+        print("Please provide a --domain")
+        return
+    try:
+        domain = sys.argv[sys.argv.index("--domain") + 1]
+    except IndexError:
+        print("Please provide a domain")
+        return
+    if domain.count(".") == 0:
+        domain = f"{domain}.netlify.app"
+    try:
+        site_id = get_site_id_from_netlify_domain(domain)
+    except NoResult:
+        print(f"No site found with domain '{domain}'")
+        return
+    if len(DOMAINS) == 1 and custom_domain.count(".") == 0:
+        custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+    set_to_custom_domain(site_id, custom_domain)
+    print(f"custom domain was set to {custom_domain}")
+
+
+def cli_delete_site() -> None:
+    """
+    Delete a site from Netlify
+    """
+    try:
+        domain = sys.argv[sys.argv.index("--delete-site") + 1]
+    except (ValueError, IndexError):
+        try:
+            domain = sys.argv[sys.argv.index("--remove-site") + 1]
+        except IndexError:
+            print("Please provide a domain")
+            return
+    netlify_domain = domain
+    if netlify_domain.count(".") == 0:
+        netlify_domain = f"{domain}.netlify.app"
+    try:
+        site_id = get_site_id_from_netlify_domain(netlify_domain)
+    except NoResult:
+        print(f"No site found with domain '{domain}', trying custom domains")
+        if domain.count(".") == 0 and len(DOMAINS) == 1:
+            domain = f"{domain}.{DOMAINS[0]}"
+        try:
+            site_id = get_site_id_from_custom_domain(domain)
+        except NoResult:
+            print(f"No site found with custom domain '{domain}'")
+            return
+    delete_site(site_id)
+    print(f"site {domain} was deleted")
+
+
+def delete_site(site_id: str) -> None:
+    URL = f"https://api.netlify.com/api/v1/sites/{site_id}"
+    response = requests.delete(URL, headers=AUTH_HEADER)
+    if not response.ok:
+        raise Exception("something went wrong")
+
+
+def display_help() -> None:
+    print(
+        """
+    netlify.py --help
+    netlify.py --root-dir <path> --custom-domain <domain (or subdomain prefix if there's only one domain in DOMAINS)>
+    netlify.py --list-sites
+    netlify.py --custom-domain <custom_domain (or subdomain prefix if there's only one domain in DOMAINS)> --domain <existing_domain>
+    netlify.py --remove-custom-domain <custom_domain (or subdomain prefix if there's only one domain in DOMAINS)>
+    netlify.py --delete-site <domain (or subdomain prefix if there's only one domain in DOMAINS)>
+    """
+    )
+
+
+def deploy_site() -> None:
+    """
+    Deploy a folder of web pages to Netlify
+    """
+    custom_domain = None
+    if "--custom-domain" in sys.argv:
+        try:
+            custom_domain = sys.argv[sys.argv.index("--custom-domain") + 1]
+        except IndexError:
+            print("Please provide a domain")
+            return
+    if "--root-dir" not in sys.argv:
+        print("Please provide a root directory")
+        return
+    try:
+        root_dir = pl.Path(sys.argv[sys.argv.index("--root-dir") + 1])
+    except IndexError:
+        print("Please provide a root directory")
+        return
+
+    if (
+        custom_domain is not None
+        and len(DOMAINS) == 1
+        and custom_domain.count(".") == 0
+    ):
+        custom_domain = f"{custom_domain}.{DOMAINS[0]}"
+    deploy_page_to_netlify(root_dir, custom_domain)
+    print("okay, should be all set!")
+
+
+def cli_list_sites() -> None:
+    """
+    List all sites on Netlify
+    """
+    URL = "https://api.netlify.com/api/v1/sites"
+    response = requests.get(URL, headers=AUTH_HEADER)
+    if not response.ok:
+        raise Exception("something went wrong")
+    rj = response.json()
+
+    print("sites without custom domains:")
+    for site in rj:
+        if site["custom_domain"] is None:
+            print(f"{site['name']}: {site['url']}")
+
+    print()
+
+    print("sites with custom domains:")
+    for site in rj:
+        if site["custom_domain"] is not None:
+            print(f"{site['name']}: {site['url']}")
+
+
+def main() -> None:
+    if "--help" in sys.argv:
+        display_help()
+        sys.exit()
+    elif "--list-sites" in sys.argv:
+        cli_list_sites()
+        sys.exit()
+    elif "--remove-custom-domain" in sys.argv:
+        try:
+            cli_remove_custom_domain()
+        except NoResult:
+            print("No site found with that custom domain")
+        sys.exit()
+    elif "--delete-site" in sys.argv or "--remove-site" in sys.argv:
+        cli_delete_site()
+        sys.exit()
+    elif "--custom-domain" in sys.argv:
+        cli_set_custom_domain()
+        sys.exit()
+    else:
+        deploy_site()
+
+
+if __name__ == "__main__":
+    main()
