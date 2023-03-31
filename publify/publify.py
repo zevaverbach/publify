@@ -78,7 +78,7 @@ def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -
     rj = response.json()
     print("the site is published: " + rj["url"])
     if custom_domain is not None:
-        sleep(2)
+        check_that_custom_domain_is_not_in_use(custom_domain)
         set_to_custom_domain(rj["id"], custom_domain)
 
 
@@ -134,7 +134,6 @@ def check_that_custom_domain_is_not_in_use(custom_domain: str) -> None:
 
 def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
     URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
-    check_that_custom_domain_is_not_in_use(custom_domain)
     response = requests.put(
         URL,
         json={"custom_domain": custom_domain},
@@ -174,6 +173,7 @@ def cli_set_custom_domain() -> None:
     except IndexError:
         print("Please provide a --custom-domain")
         return
+    check_that_custom_domain_is_not_in_use(custom_domain)
     try:
         domain = sys.argv[sys.argv.index("--domain") + 1]
     except IndexError:
@@ -309,11 +309,9 @@ def cli_list_sites() -> None:
 
 def main() -> None:
     if "--help" in sys.argv or len(sys.argv) == 1:
-        display_help()
-        sys.exit()
+        return display_help()
     elif "--list-sites" in sys.argv:
-        cli_list_sites()
-        sys.exit()
+        return cli_list_sites()
     elif "--remove-custom-domain" in sys.argv:
         try:
             cli_remove_custom_domain()
@@ -321,26 +319,25 @@ def main() -> None:
             print("No site found with that custom domain")
         except NoCustomDomains:
             print("No custom domains configured in NETLIFY_DOMAINS")
-        sys.exit()
+        return
     elif "--delete-site" in sys.argv or "--remove-site" in sys.argv:
         try:
             cli_delete_site()
         except NoCustomDomains as e:
             print(str(e))
-        sys.exit()
+        return
     elif "--custom-domain" in sys.argv and "--root-dir" not in sys.argv:
         if len(NETLIFY_DOMAINS) == 0:
             print("No custom domains configured in NETLIFY_DOMAINS")
-            sys.exit()
+            return
         if "--domain" not in sys.argv:
             print("Please supply a --domain")
-            sys.exit()
+            return
         try:
             cli_set_custom_domain()
         except DomainInUse:
             print("That domain is already in use")
-            sys.exit()
-        sys.exit()
+        return
     else:
         try:
             deploy_site()
