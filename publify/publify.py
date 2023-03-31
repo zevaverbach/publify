@@ -241,8 +241,7 @@ def deploy_site() -> None:
             print("Please provide a --custom-domain")
             return
     if "--root-dir" not in sys.argv:
-        print("Please provide a root directory")
-        return
+        return display_help()
     try:
         root_dir = pl.Path(sys.argv[sys.argv.index("--root-dir") + 1])
     except IndexError:
