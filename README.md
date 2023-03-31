@@ -14,7 +14,7 @@
 the site is published: http://6426ed336771f2380224fb84--scintillating-mochi-760bd3.netlify.app
 ```
 
-## Publish Sites to Netlify With Custom Domains Too!
+## Publish Sites to Netlify With Custom Subdomains Too!
 
 ```bash
 > pub --root-dir mysite --custom-domain dude.helpers.fun
@@ -30,7 +30,7 @@ the site is published: http://642718842cb34f02bc6b0137--cheery-daifuku-f3417f.ne
 the site is published at dudette.helpers.fun.
 ```
 
-## Add A Custom Domain To An Already Published Site!
+## Add A Custom Subdomain To An Already Published Site!
 
 ```bash
 > pub --custom-domain hey.helpers.fun --domain startling-gingersnap-425138.netlify.app

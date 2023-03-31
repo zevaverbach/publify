@@ -50,7 +50,7 @@ def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -
     print("the site is published: " + rj["url"])
     if custom_domain is not None:
         check_that_custom_domain_is_not_in_use(custom_domain)
-        set_to_custom_domain(rj["id"], custom_domain)
+        set_to_custom_domain(rj["id"], custom_domain, rj["url"])
 
 
 def remove_custom_domain(site_id: str) -> None:
@@ -80,7 +80,7 @@ def delete_site(site_id: str) -> None:
         raise Exception("something went wrong")
 
 
-def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
+def set_to_custom_domain(site_id: str, custom_domain: str, orig_url: str) -> None:
     URL = f"https://app.netlify.com/access-control/bb-api/api/v1/sites/{site_id}"
     response = requests.put(
         URL,
@@ -90,12 +90,12 @@ def set_to_custom_domain(site_id: str, custom_domain: str) -> None:
     if not response.ok:
         print(response.reason)
         raise Exception("something went wrong with setting the custom domain")
-    print(f"the site is published at {custom_domain}.")
+    print(f"the site is published at {custom_domain}. (originally '{orig_url}')")
 
 
 def get_site_id_from_netlify_domain(domain: str) -> tuple[str, str]:
     orig_domain = domain
-    if not domain.startswith("http://"):
+    if not domain.startswith("http://") and not domain.startswith("https://"):
         domain = f"http://{domain}"
     candidate = None
     for site in get_all_sites():
@@ -106,6 +106,8 @@ def get_site_id_from_netlify_domain(domain: str) -> tuple[str, str]:
                 )
             candidate = site["id"], site["url"]
     if candidate is None:
+        if domain.startswith("http://"):
+            return get_site_id_from_netlify_domain(domain.replace("http", "https"))
         raise NoResult(f"no result for partial domain '{orig_domain}'")
     return candidate
 

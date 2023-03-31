@@ -24,11 +24,11 @@ def cli_display_help() -> None:
     print(
         """Usage:
     pub help
-    pub <rootpath> [<custom_domain>]             -------------------------------->deploy a site
-    pub list                                     ------------------------------->list all sites
-    pub custom <custom_domain> <existing_domain> -------------------------->set a custom domain
-    pub remove-custom <custom_domain>            ----------------------->remove a custom domain
-    pub delete/remove <domain or custom_domain>  -------------------------------->delete a site
+    pub <rootpath> [<custom_domain>]             --------------------------------> deploy a site
+    pub list                                     -------------------------------> list all sites
+    pub custom <custom_domain> <existing_domain> --------------------------> set a custom domain
+    pub remove-custom <custom_domain>            -----------------------> remove a custom domain
+    pub delete/remove <domain or custom_domain>  --------------------------------> delete a site
     """
     )
 
@@ -74,7 +74,7 @@ def cli_set_custom_domain(custom_domain: str, domain: str) -> None:
         return
     if len(NETLIFY_DOMAINS) == 1 and custom_domain.count(".") == 0:
         custom_domain = f"{custom_domain}.{NETLIFY_DOMAINS[0]}"
-    set_to_custom_domain(site_id, custom_domain)
+    set_to_custom_domain(site_id, custom_domain, domain)
 
 
 def cli_remove_custom_domain() -> None:
@@ -111,13 +111,8 @@ def cli_delete_site() -> None:
         except IndexError:
             print("Please provide a domain")
             return
-    got = get_site_id_from_netlify_domain(domain)
     try:
-        site_id, full_domain = got
-    except ValueError:
-        print(got)
-        raise
-
+        site_id, full_domain = get_site_id_from_netlify_domain(domain)
     except NoResult:
         if len(NETLIFY_DOMAINS) == 0:
             raise NoCustomDomains(
