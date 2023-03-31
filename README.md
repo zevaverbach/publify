@@ -112,4 +112,5 @@ To do this magic, you have to first
 
 - [ ] add support for partial updates, so it's not only about subdomains, but also `/sub-pages`
 - [ ] add some color and spinners to the CLI using Rich
+- [ ] sitemap.xml generation
 
