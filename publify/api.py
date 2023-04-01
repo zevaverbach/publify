@@ -49,7 +49,6 @@ def deploy_page_to_netlify(dirpath: pl.Path, custom_domain: str | None = None) -
     rj = response.json()
     print("the site is published: " + rj["url"])
     if custom_domain is not None:
-        check_that_custom_domain_is_not_in_use(custom_domain)
         set_to_custom_domain(rj["id"], custom_domain, rj["url"])
 
 
@@ -119,17 +118,13 @@ def get_site_id_from_custom_domain(custom_domain: str) -> tuple[str, str]:
     raise NoResult
 
 
-def check_that_custom_domain_is_not_in_use(
-    custom_domain: str, exact_match: bool = False
-) -> None:
+def check_that_custom_domain_is_not_in_use(custom_domain: str) -> None:
     candidate = None
     for site in get_all_sites():
         scd = site["custom_domain"]
         if scd is None:
             continue
-        if exact_match and scd == custom_domain:
-            raise DomainInUse(f"'{custom_domain}' is already in use")
-        elif not exact_match and scd.startswith(custom_domain):
+        if scd == custom_domain:
             if candidate is not None:
                 raise TooManyResults(
                     f"too many results for partial domain '{custom_domain}', it's ambiguous"
