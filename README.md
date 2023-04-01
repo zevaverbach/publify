@@ -109,8 +109,5 @@ To do this magic, you have to first
 1) Delegate DNS management of all domains listed in `DOMAINS` to Netlify ([link](https://docs.netlify.com/domains-https/netlify-dns/delegate-to-netlify/))
 
 # TODO
-
-- [ ] add support for partial updates, so it's not only about subdomains, but also `/sub-pages`
 - [ ] add some color and spinners to the CLI using Rich
-- [ ] sitemap.xml generation
 
