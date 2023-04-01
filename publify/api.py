@@ -119,16 +119,21 @@ def get_site_id_from_custom_domain(custom_domain: str) -> tuple[str, str]:
     raise NoResult
 
 
-def check_that_custom_domain_is_not_in_use(custom_domain: str) -> None:
+def check_that_custom_domain_is_not_in_use(
+    custom_domain: str, exact_match: bool = False
+) -> None:
     candidate = None
     for site in get_all_sites():
-        if site["custom_domain"] is not None and site["custom_domain"].startswith(
-            custom_domain
-        ):
+        scd = site["custom_domain"]
+        if scd is None:
+            continue
+        if exact_match and scd == custom_domain:
+            raise DomainInUse(f"'{custom_domain}' is already in use")
+        elif not exact_match and scd.startswith(custom_domain):
             if candidate is not None:
                 raise TooManyResults(
                     f"too many results for partial domain '{custom_domain}', it's ambiguous"
                 )
-            candidate = site["custom_domain"]
+            candidate = scd
     if candidate is not None:
         raise DomainInUse(f"'{candidate}' is already in use")
