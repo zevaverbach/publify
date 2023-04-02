@@ -13,7 +13,7 @@ class NoIndexHtml(Exception):
 
 def make_a_zip_file(dirpath: pl.Path) -> pl.Path:
 
-    zipfile_filename = str(uuid.uuid4())
+    zipfile_filename = "/tmp/" + str(uuid.uuid4())
     shutil.make_archive(zipfile_filename, "zip", dirpath)
     return pl.Path(zipfile_filename + ".zip")
 
